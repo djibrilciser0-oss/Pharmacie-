@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype : disponibilité des médicaments</title>
+<style>
+:root{
+  --ink:#10201a; --muted:#5d6e66; --line:#dbe4df; --bg:#e6edea; --paper:#ffffff; --soft:#f2f6f4;
+  --brand:#0b5d46; --brand-d:#074234; --ok:#12805c; --low:#c77700; --out:#c0392b; --unk:#7b8794;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding:20px 12px 40px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid #2a8f73;outline-offset:2px}
+
+.top{max-width:860px;margin:0 auto 16px;text-align:center}
+.top h1{font-size:20px;letter-spacing:-.01em}
+.top p{font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.steps{display:inline-block;text-align:left;margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 14px 10px 30px;font-size:13px;line-height:1.6}
+.top-actions{margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 14px;font-size:13px}
+.chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.seg{display:none}
+
+.stage{display:flex;gap:28px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;align-items:center;gap:8px}
+.col-label{font-size:13px;font-weight:600;color:var(--brand-d)}
+.phone{width:360px;height:700px;background:#0d1a15;border-radius:36px;padding:9px;box-shadow:0 18px 40px rgba(16,32,26,.22)}
+.screen{position:relative;width:100%;height:100%;background:var(--paper);border-radius:28px;overflow:hidden;display:flex;flex-direction:column}
+.bar{display:flex;justify-content:space-between;padding:9px 20px 0;font-size:11px;color:var(--muted)}
+.view{flex:1;overflow-y:auto;padding:14px 16px 16px}
+.nav{display:flex;border-top:1px solid var(--line);background:var(--paper)}
+.nav button{flex:1;padding:9px 0 10px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav button.on{color:var(--brand);font-weight:700}
+.nav svg{width:21px;height:21px}
+svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+h2{font-size:22px;letter-spacing:-.02em;line-height:1.2}
+.sub{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.45}
+.search{display:flex;align-items:center;gap:8px;margin-top:14px;border:1.5px solid var(--line);background:var(--soft);border-radius:12px;padding:10px 12px}
+.search input{flex:1;border:0;background:none;font:inherit;font-size:15px;color:var(--ink)}
+.search svg{width:18px;height:18px;color:var(--muted)}
+.loc{margin-top:10px;font-size:12.5px;color:var(--brand-d);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.dot.ok{background:var(--ok)}.dot.low{background:var(--low)}.dot.out{background:var(--out)}.dot.unk{background:var(--unk)}
+.list{margin-top:14px;display:flex;flex-direction:column}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:12px 2px;border-bottom:1px solid var(--line)}
+.row b{font-size:14.5px;display:block}
+.row small{font-size:12px;color:var(--muted)}
+.back{font-size:13px;color:var(--brand);margin-bottom:8px;padding:2px 0}
+.filter{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-top:12px}
+.tog{width:34px;height:20px;border-radius:99px;background:#c3cfc9;position:relative;transition:background .2s;flex:none}
+.tog::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.tog.on{background:var(--brand)}.tog.on::after{transform:translateX(14px)}
+
+.card{border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-top:10px;width:100%;text-align:left;display:block;background:var(--paper)}
+.card .h{display:flex;justify-content:space-between;gap:8px}
+.card .n{font-weight:700;font-size:14.5px}
+.card .d{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.state{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:13.5px;font-weight:600}
+.state.ok{color:var(--ok)}.state.low{color:var(--low)}.state.out{color:var(--out)}.state.unk{color:var(--unk)}
+.fresh{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:12px;color:var(--muted)}
+.meter{display:flex;gap:2px}
+.meter i{width:14px;height:5px;border-radius:2px;background:#d5ded9}
+.meter.l3 i{background:var(--ok)}
+.meter.l2 i:nth-child(-n+2){background:#8aa84b}
+.meter.l1 i:nth-child(1){background:var(--low)}
+.meter.l0 i{background:#d5ded9}
+.loc2{font-size:12.5px;color:var(--muted);margin-top:3px}
+.opn{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:12.5px;font-weight:600}
+.opn.open{color:var(--ok)}.opn.soon{color:var(--low)}.opn.closed{color:var(--out)}
+.price{margin-left:auto;font-weight:700;color:var(--ink);font-size:13.5px;white-space:nowrap}
+.chips{display:flex;gap:6px;margin-top:12px}
+.chips .chip{padding:5px 12px;font-size:12.5px}
+.pin-in{width:84px;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;font-size:13px;text-align:right;background:var(--soft);color:var(--ink)}
+.prow{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12.5px;color:var(--muted)}
+.warn{margin-top:8px;font-size:12px;background:#fff4df;color:#8a5200;border-radius:8px;padding:7px 9px;line-height:1.4}
+
+.btn{display:block;width:100%;text-align:center;border-radius:12px;padding:12px;font-weight:700;font-size:14.5px;margin-top:10px}
+.btn.p{background:var(--brand);color:#fff}
+.btn.s{border:1.5px solid var(--brand);color:var(--brand)}
+.btn.p:active{background:var(--brand-d)}
+.kv{margin-top:12px;border-top:1px solid var(--line)}
+.kv div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.kv span:first-child{color:var(--muted)}
+
+.mapbox{margin-top:12px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#eef3ee}
+.mapbox svg{display:block;width:100%;height:auto;stroke:none}
+.pin{cursor:pointer}
+.sel-card{margin-top:10px}
+.note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.4}
+
+.seg3{display:flex;gap:4px;margin-top:9px}
+.seg3 button{flex:1;padding:8px 2px;border:1.5px solid var(--line);border-radius:9px;font-size:12px;font-weight:600;color:var(--muted)}
+.seg3 button.on.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg3 button.on.low{background:var(--low);border-color:var(--low);color:#fff}
+.seg3 button.on.out{background:var(--out);border-color:var(--out);color:#fff}
+
+.banner{position:absolute;left:10px;right:10px;top:-120px;background:#10201a;color:#fff;border-radius:14px;padding:11px 13px;font-size:13px;line-height:1.4;box-shadow:0 10px 24px rgba(0,0,0,.3);transition:top .35s ease;z-index:5}
+.banner.show{top:12px}
+.banner b{display:block;font-size:12px;color:#8fd6bd;margin-bottom:2px}
+.toast{position:absolute;left:50%;bottom:76px;transform:translate(-50%,20px);background:#10201a;color:#fff;font-size:12.5px;padding:8px 14px;border-radius:99px;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;z-index:5}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.empty{margin-top:30px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5}
+
+@media (max-width:820px){
+  .seg{display:flex;gap:8px;justify-content:center;margin:0 auto 14px}
+  .col{display:none}.col.show{display:flex}
+  .col-label{display:none}
+}
+@media (max-width:400px){.phone{width:100%;height:calc(100vh - 150px);min-height:560px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Prototype : disponibilité des médicaments</h1>
+  <p>Maquette cliquable avec données fictives. Elle montre le parcours du patient et celui du pharmacien, reliés entre eux.</p>
+  <ol class="steps">
+    <li>Côté patient : cherchez « Coartem » puis touchez « M'avertir ».</li>
+    <li>Côté pharmacie : passez Coartem à « Disponible ».</li>
+    <li>Le patient reçoit l'alerte.</li>
+  </ol>
+  <div class="top-actions"><button class="chip" id="reset">Réinitialiser la démo</button></div>
+</div>
+
+<div class="seg" id="seg">
+  <button class="chip on" data-col="patient">Patient</button>
+  <button class="chip" data-col="pharma">Pharmacien</button>
+</div>
+
+<div class="stage">
+  <div class="col show" id="col-patient">
+    <div class="col-label">Application du patient</div>
+    <div class="phone"><div class="screen" id="u">
+      <div class="banner" id="u-banner"></div><div class="toast" id="u-toast"></div>
+      <div class="bar"><span class="clock">--:--</span><span>Prototype</span></div>
+      <div class="view" id="u-view"></div>
+      <div class="nav" id="u-nav"></div>
+    </div></div>
+  </div>
+  <div class="col" id="col-pharma">
+    <div class="col-label">Espace pharmacien</div>
+    <div class="phone"><div class="screen" id="p">
+      <div class="toast" id="p-toast"></div>
+      <div class="bar"><span class="clock">--:--</span><span>Prototype</span></div>
+      <div class="view" id="p-view"></div>
+    </div></div>
+  </div>
+</div>
+
+<script>
+const MEDS=[
+ {id:'amox',n:'Amoxicilline 500 mg',s:'Antibiotique'},
+ {id:'para',n:'Paracétamol 500 mg',s:'Douleur et fièvre'},
+ {id:'coar',n:'Coartem 20/120 mg',s:'Antipaludique'},
+ {id:'ibu',n:'Ibuprofène 400 mg',s:'Anti-inflammatoire'},
+ {id:'metro',n:'Métronidazole 500 mg',s:'Antibiotique'}
+];
+const PH=[
+ {id:1,n:'Pharmacie du Carrefour',x:58,y:52,tel:'+237 600 00 00 01',o:480,c:1260,reg:'Littoral',ville:'Douala',q:'Akwa',a:'Face au marché central'},
+ {id:2,n:'Pharmacie Saint-Michel',x:36,y:70,tel:'+237 600 00 00 02',o:450,c:1320,reg:'Littoral',ville:'Douala',q:'Bonapriso',a:'Près de la station-service'},
+ {id:3,n:'Pharmacie de la Paix',x:70,y:78,tel:'+237 600 00 00 03',o:480,c:1200,reg:'Littoral',ville:'Douala',q:'Deido',a:'Route principale'},
+ {id:4,n:'Pharmacie Nouvelle Espérance',x:22,y:40,tel:'+237 600 00 00 04',o:480,c:1140,reg:'Littoral',ville:'Douala',q:'Bonamoussadi',a:'Derrière l\u2019école publique'},
+ {id:5,n:'Pharmacie Bonne Santé',x:84,y:44,tel:'+237 600 00 00 05',o:0,c:1440,reg:'Littoral',ville:'Douala',q:'Makepe',a:'À côté du centre de santé'}
+];
+const ME=2, USER={x:50,y:62};
+const initStock=()=>({
+ 1:{amox:['low',12],para:['ok',12],coar:['out',12],ibu:['ok',95],metro:['ok',12]},
+ 2:{amox:['ok',4],para:['ok',4],coar:['out',40],ibu:['low',4],metro:['ok',4]},
+ 3:{amox:['out',200],para:['ok',200],coar:['low',180],metro:['ok',500]},
+ 4:{amox:['ok',3000],para:['ok',3000],coar:['out',1800]},
+ 5:{amox:['ok',30],para:['low',30],ibu:['ok',30],metro:['out',30]}
+});
+const initPrice=()=>({
+ 1:{amox:2000,para:600,coar:3000,ibu:1200,metro:1500},
+ 2:{amox:1800,para:500,coar:2800,ibu:1000,metro:1400},
+ 3:{amox:2200,para:700,coar:3200,ibu:1300},
+ 4:{amox:1900,para:600,coar:2900},
+ 5:{amox:2500,para:800,ibu:1500,metro:1800}
+});
+let S;
+function fresh(){S={price:initPrice(),closed:[],sort:'dist',onlyOpen:false,stock:initStock(),screen:'home',med:null,ph:null,onlyAvail:false,alerts:[],history:[],q:'',sel:null,tab:'home'};}
+fresh();
+
+const dist=p=>Math.hypot(p.x-USER.x,p.y-USER.y)/12;
+const fmtD=k=>k<1?Math.round(k*10)*100+' m':k.toFixed(1).replace('.',',')+' km';
+const ago=m=>m<1?'à l\u2019instant':m<60?`il y a ${Math.round(m)} min`:m<1440?`il y a ${Math.round(m/60)} h`:`il y a ${Math.round(m/1440)} j`;
+const lvl=m=>m<60?3:m<360?2:m<1440?1:0;
+const lvlTxt=['Non confirmé','À vérifier','Assez récent','Récent'];
+const eff=(st,m)=>m>1440?'unk':st;
+const stTxt={ok:'Disponible',low:'Stock faible',out:'Indisponible',unk:'Non confirmé'};
+const med=id=>MEDS.find(m=>m.id===id);
+const ph=id=>PH.find(p=>p.id===id);
+const $=id=>document.getElementById(id);
+const icon={
+ search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+ map:'<svg viewBox="0 0 24 24"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>',
+ bell:'<svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg>'
+};
+
+const hh=m=>{const h=Math.floor(m/60)%24,mm=m%60;return mm?`${h} h ${String(mm).padStart(2,'0')}`:`${h} h`;};
+const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes();};
+function openInfo(p){
+  if(S.closed.includes(p.id))return {k:'closed',t:'Fermée exceptionnellement'};
+  const n=nowMin();
+  if(p.o===0&&p.c===1440)return {k:'open',t:'Ouverte 24 h sur 24'};
+  if(n>=p.o&&n<p.c){const r=p.c-n;return r<=60?{k:'soon',t:`Ouverte · ferme dans ${r} min`}:{k:'open',t:`Ouverte · ferme à ${hh(p.c)}`};}
+  return {k:'closed',t:n<p.o?`Fermée · ouvre à ${hh(p.o)}`:`Fermée · ouvre demain à ${hh(p.o)}`};
+}
+const isOpen=p=>{const k=openInfo(p).k;return k==='open'||k==='soon';};
+const fmtPrice=v=>v==null?'Prix non indiqué':v.toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g,' ')+' FCFA';
+const place=p=>`${p.q} · ${p.ville} · ${p.reg}`;
+const opnDot={open:'ok',soon:'low',closed:'out'};
+function tickClock(){const d=new Date();const t=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');document.querySelectorAll('.clock').forEach(c=>c.textContent=t);}
+function entries(medId){
+  return PH.filter(p=>S.stock[p.id][medId]).map(p=>{const [st,m]=S.stock[p.id][medId];return {p,st,m,e:eff(st,m),d:dist(p),pr:S.price[p.id][medId]};}).sort((a,b)=>S.sort==='price'?((a.pr??1e9)-(b.pr??1e9)):a.d-b.d);
+}
+function freshHtml(m){const l=lvl(m);return `<div class="fresh"><span class="meter l${l}"><i></i><i></i><i></i></span><span>${lvlTxt[l]} · mis à jour ${ago(m)}</span></div>`;}
+function card(en,act){
+  return `<button class="card" data-act="${act}" data-ph="${en.p.id}">
+    <div class="h"><span class="n">${en.p.n}</span><span class="d">${fmtD(en.d)}</span></div>
+    <div class="loc2">${place(en.p)}</div>
+    <div class="opn ${openInfo(en.p).k}"><span class="dot ${opnDot[openInfo(en.p).k]}"></span>${openInfo(en.p).t}</div>
+    <div class="state ${en.e}"><span class="dot ${en.e}"></span>${stTxt[en.e]}<span class="price">${fmtPrice(en.pr)}</span></div>
+    ${freshHtml(en.m)}
+    ${en.e==='unk'?'<div class="warn">Information ancienne. Appelez la pharmacie avant de vous déplacer.</div>':''}
+  </button>`;
+}
+
+function renderUser(){
+  let h='';
+  if(S.screen==='home'){
+    const q=S.q.trim().toLowerCase();
+    const res=MEDS.filter(m=>!q||m.n.toLowerCase().includes(q)||m.s.toLowerCase().includes(q));
+    h=`<h2>Quel médicament cherchez-vous ?</h2>
+    <p class="sub">Voyez quelles pharmacies proches déclarent l\u2019avoir en stock.</p>
+    <label class="search">${icon.search}<input id="q" type="search" placeholder="Nom du médicament" value="${S.q.replace(/"/g,'&quot;')}" autocomplete="off"></label>
+    <div class="loc"><span class="dot ok"></span>Position partagée · pharmacies dans un rayon de 5 km</div>
+    <div class="list">${res.map(m=>`<button class="row" data-act="pick" data-med="${m.id}"><span><b>${m.n}</b><small>${m.s}</small></span><span>›</span></button>`).join('')||'<div class="empty">Aucun médicament ne correspond. Vérifiez l\u2019orthographe ou cherchez par usage, par exemple « fièvre ».</div>'}</div>`;
+  }
+  if(S.screen==='results'){
+    const m=med(S.med);let en=entries(S.med);
+    if(S.onlyAvail)en=en.filter(e=>e.e==='ok'||e.e==='low');
+    if(S.onlyOpen)en=en.filter(e=>isOpen(e.p));
+    const allOut=entries(S.med).every(e=>e.e==='out'||e.e==='unk');
+    const hasAlert=S.alerts.includes(S.med);
+    h=`<button class="back" data-act="home">‹ Retour</button>
+    <h2>${m.n}</h2><p class="sub">${en.length} pharmacie${en.length>1?'s':''} · triées par ${S.sort==='price'?'prix':'distance'}</p>
+    <div class="filter"><button class="tog ${S.onlyAvail?'on':''}" data-act="filter" aria-label="Disponibles seulement" aria-pressed="${S.onlyAvail}"></button>Afficher seulement les disponibles</div>
+    <div class="filter"><button class="tog ${S.onlyOpen?'on':''}" data-act="filterOpen" aria-label="Ouvertes maintenant seulement" aria-pressed="${S.onlyOpen}"></button>Afficher seulement les pharmacies ouvertes</div>
+    <div class="chips"><button class="chip ${S.sort==='dist'?'on':''}" data-act="sort" data-s="dist">Plus proche</button><button class="chip ${S.sort==='price'?'on':''}" data-act="sort" data-s="price">Moins cher</button></div>
+    ${allOut?`<div class="warn" style="margin-top:12px">Aucune pharmacie ne déclare ce médicament en stock pour le moment.</div>`:''}
+    ${en.map(e=>card(e,'detail')).join('')||'<div class="empty">Aucune pharmacie ne correspond. Désactivez un filtre ou activez une alerte.</div>'}
+    <button class="btn ${hasAlert?'s':'p'}" data-act="alert" data-med="${S.med}">${hasAlert?'Alerte activée · désactiver':'M\u2019avertir quand il sera disponible'}</button>`;
+  }
+  if(S.screen==='detail'){
+    const p=ph(S.ph),[st,m]=S.stock[p.id][S.med],e=eff(st,m),md=med(S.med);
+    h=`<button class="back" data-act="results">‹ Retour aux résultats</button>
+    <h2>${p.n}</h2><p class="sub">${md.n}</p>
+    <div class="state ${e}" style="font-size:16px"><span class="dot ${e}"></span>${stTxt[e]}</div>
+    ${freshHtml(m)}
+    ${e==='unk'?'<div class="warn">La pharmacie n\u2019a pas confirmé son stock depuis plus de 24 h. Ne comptez pas sur cette information.</div>':''}
+    <div class="opn ${openInfo(p).k}" style="font-size:14px"><span class="dot ${opnDot[openInfo(p).k]}"></span>${openInfo(p).t}</div>
+    <div class="kv"><div><span>Prix</span><span><b>${fmtPrice(S.price[p.id][S.med])}</b></span></div><div><span>Région</span><span>${p.reg}</span></div><div><span>Ville</span><span>${p.ville}</span></div><div><span>Quartier</span><span>${p.q}</span></div><div><span>Adresse</span><span>${p.a}</span></div><div><span>Horaires</span><span>${p.o===0&&p.c===1440?'24 h sur 24':hh(p.o)+' à '+hh(p.c)}</span></div><div><span>Distance</span><span>${fmtD(dist(p))}</span></div><div><span>Téléphone</span><span>${p.tel}</span></div></div>
+    <button class="btn p" data-act="route">Afficher l\u2019itinéraire</button>
+    <button class="btn s" data-act="call">Appeler la pharmacie</button>
+    <p class="note">La disponibilité et le prix sont déclarés par la pharmacie. Ils ne sont pas garantis. Prix indicatifs par boîte, fictifs dans ce prototype.</p>`;
+  }
+  if(S.screen==='map'){
+    const m=S.med?med(S.med):null;
+    const pins=PH.map(p=>{
+      let c='#0b5d46';
+      if(m){const s=S.stock[p.id][m.id];c=s?({ok:'#12805c',low:'#c77700',out:'#c0392b',unk:'#7b8794'})[eff(s[0],s[1])]:'#9aa8a1';}
+      return `<g class="pin" data-act="pin" data-ph="${p.id}" tabindex="0" role="button" aria-label="${p.n}"><circle cx="${p.x}" cy="${p.y}" r="${S.sel===p.id?5.6:4.2}" fill="${c}" stroke="#fff" stroke-width="1.4"/><path d="M${p.x-1.4} ${p.y}h2.8M${p.x} ${p.y-1.4}v2.8" stroke="#fff" stroke-width="1" fill="none"/></g>`;
+    }).join('');
+    h=`<h2>Carte</h2><p class="sub">${m?`Disponibilité de ${m.n}`:'Choisissez un médicament pour colorer les pharmacies.'}</p>
+    <div class="mapbox"><svg viewBox="0 0 100 100" role="img" aria-label="Carte schématique">
+      <rect width="100" height="100" fill="#eef3ee"/>
+      <path d="M0 58 Q30 50 55 55 T100 48" stroke="#fff" stroke-width="5" fill="none"/>
+      <path d="M45 0 Q50 40 48 100" stroke="#fff" stroke-width="4" fill="none"/>
+      <path d="M0 24 L100 30" stroke="#fff" stroke-width="2.4" fill="none"/>
+      <path d="M0 84 L100 72" stroke="#fff" stroke-width="2.4" fill="none"/>
+      <path d="M78 0 L66 100" stroke="#fff" stroke-width="2.4" fill="none"/>
+      <circle cx="${USER.x}" cy="${USER.y}" r="9" fill="#2563eb" opacity=".13"/>
+      <circle cx="${USER.x}" cy="${USER.y}" r="3" fill="#2563eb" stroke="#fff" stroke-width="1.2"/>
+      ${pins}</svg></div>
+    <p class="note">Point bleu : votre position. La version réelle utilise OpenStreetMap.</p>
+    ${S.sel?(()=>{const p=ph(S.sel);const s=m&&S.stock[p.id][m.id];const e=s?{p,st:s[0],m:s[1],e:eff(s[0],s[1]),d:dist(p)}:null;
+      return e?`<div class="sel-card">${card(e,'detail-from-map')}</div>`:`<div class="card sel-card"><div class="n">${p.n}</div><div class="sub">${m?'Ne suit pas ce médicament.':'Choisissez un médicament pour voir sa disponibilité.'}</div></div>`;})():''}`;
+  }
+  if(S.screen==='alerts'){
+    h=`<h2>Alertes</h2><p class="sub">Vous êtes prévenu dès qu\u2019une pharmacie déclare le médicament disponible.</p>
+    <div class="list">${S.alerts.map(id=>`<div class="row"><span><b>${med(id).n}</b><small>En attente d\u2019une pharmacie</small></span><button class="chip" data-act="alert" data-med="${id}">Retirer</button></div>`).join('')}
+    ${S.history.map(t=>`<div class="row"><span><b>${t.title}</b><small>${t.when}</small></span><span class="dot ok"></span></div>`).join('')}
+    ${!S.alerts.length&&!S.history.length?'<div class="empty">Aucune alerte pour le moment. Ouvrez un médicament indisponible et touchez « M\u2019avertir ».</div>':''}</div>`;
+  }
+  $('u-view').innerHTML=h;
+  const tab=S.screen==='map'?'map':S.screen==='alerts'?'alerts':'home';
+  $('u-nav').innerHTML=[['home','Recherche',icon.search],['map','Carte',icon.map],['alerts','Alertes',icon.bell]].map(([k,l,i])=>`<button data-act="nav" data-to="${k}" class="${tab===k?'on':''}">${i}${l}${k==='alerts'&&S.alerts.length?` (${S.alerts.length})`:''}</button>`).join('');
+}
+
+function renderPharma(){
+  const p=ph(ME),st=S.stock[ME];
+  $('p-view').innerHTML=`<h2>${p.n}</h2><p class="sub">${place(p)}</p>
+  <div class="opn ${openInfo(p).k}" style="margin-top:10px"><span class="dot ${opnDot[openInfo(p).k]}"></span>${openInfo(p).t}</div>
+  <div class="filter"><button class="tog ${S.closed.includes(ME)?'on':''}" data-act="closeToggle" aria-label="Fermeture exceptionnelle" aria-pressed="${S.closed.includes(ME)}"></button>Fermeture exceptionnelle (visible tout de suite)</div>
+  <p class="sub" style="margin-top:12px">Mettez à jour vos stocks et vos prix. Les patients voient le changement aussitôt.</p>
+  <button class="btn p" data-act="confirmAll" style="margin-top:12px">Confirmer que mes stocks sont à jour</button>
+  ${MEDS.map(m=>{const [s,t]=st[m.id]||['ok',0];return `<div class="card"><div class="h"><span class="n">${m.n}</span></div><div class="fresh">Dernière mise à jour : ${ago(t)}</div>
+    <div class="prow"><label for="pr-${m.id}">Prix (FCFA)</label><input class="pin-in" id="pr-${m.id}" type="number" min="0" step="50" inputmode="numeric" value="${S.price[ME][m.id]??''}" data-price="${m.id}"></div>
+    <div class="seg3">${[['ok','Disponible'],['low','Faible'],['out','Rupture']].map(([k,l])=>`<button class="${k} ${s===k?'on':''}" data-act="set" data-med="${m.id}" data-s="${k}">${l}</button>`).join('')}</div></div>`}).join('')}
+  <p class="note">Aucune quantité exacte à saisir : trois états suffisent.</p>`;
+}
+function render(){renderUser();renderPharma();}
+
+function toast(w,t){const el=$(w+'-toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200);}
+function banner(title,msg){const b=$('u-banner');b.innerHTML=`<b>${title}</b>${msg}`;b.classList.add('show');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('show'),5200);}
+
+document.addEventListener('click',ev=>{
+  const t=ev.target.closest('[data-act]');if(!t)return;
+  const a=t.dataset.act;
+  if(a==='pick'){S.med=t.dataset.med;S.screen='results';S.onlyAvail=false;}
+  else if(a==='home'){S.screen='home';}
+  else if(a==='results'){S.screen='results';}
+  else if(a==='filter'){S.onlyAvail=!S.onlyAvail;}
+  else if(a==='filterOpen'){S.onlyOpen=!S.onlyOpen;}
+  else if(a==='sort'){S.sort=t.dataset.s;}
+  else if(a==='closeToggle'){const i=S.closed.indexOf(ME);if(i>=0){S.closed.splice(i,1);toast('p','Pharmacie ouverte selon vos horaires');}else{S.closed.push(ME);toast('p','Pharmacie marquée fermée');}}
+  else if(a==='detail'){S.ph=+t.dataset.ph;S.screen='detail';}
+  else if(a==='detail-from-map'){S.ph=+t.dataset.ph;S.screen='detail';}
+  else if(a==='pin'){S.sel=+t.dataset.ph;}
+  else if(a==='route'){toast('u','Itinéraire ouvert (OpenStreetMap)');}
+  else if(a==='call'){toast('u','Appel vers '+ph(S.ph).tel);}
+  else if(a==='alert'){const id=t.dataset.med;const i=S.alerts.indexOf(id);if(i>=0){S.alerts.splice(i,1);toast('u','Alerte retirée');}else{S.alerts.push(id);toast('u','Alerte activée');}}
+  else if(a==='nav'){const to=t.dataset.to;S.screen=to==='home'?(S.med&&S.screen!=='home'?'home':'home'):to;}
+  else if(a==='set'){
+    const id=t.dataset.med,s=t.dataset.s;const before=(S.stock[ME][id]||[])[0];
+    S.stock[ME][id]=[s,0];
+    toast('p','Stock mis à jour');
+    if(s==='ok'&&before!=='ok'&&S.alerts.includes(id)){
+      S.alerts=S.alerts.filter(x=>x!==id);
+      const msg=`${med(id).n} est maintenant déclaré disponible à ${ph(ME).n}.`;
+      S.history.unshift({title:msg,when:'À l\u2019instant'});
+      banner('Alerte disponibilité',msg);
+    }
+  }
+  else if(a==='confirmAll'){Object.keys(S.stock[ME]).forEach(k=>S.stock[ME][k][1]=0);toast('p','Stocks confirmés');}
+  render();
+});
+document.addEventListener('input',ev=>{
+  if(ev.target.dataset&&ev.target.dataset.price){const v=ev.target.value;S.price[ME][ev.target.dataset.price]=v===''?undefined:Math.max(0,+v);renderUser();return;}
+  if(ev.target.id==='q'){S.q=ev.target.value;const pos=ev.target.selectionStart;renderUser();const q=$('q');q.focus();q.setSelectionRange(pos,pos);}
+});
+document.addEventListener('keydown',ev=>{if((ev.key==='Enter'||ev.key===' ')&&ev.target.classList&&ev.target.classList.contains('pin')){ev.preventDefault();ev.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
+$('reset').onclick=()=>{fresh();render();};
+$('seg').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-col]');if(!b)return;
+  document.querySelectorAll('#seg .chip').forEach(c=>c.classList.toggle('on',c===b));
+  $('col-patient').classList.toggle('show',b.dataset.col==='patient');
+  $('col-pharma').classList.toggle('show',b.dataset.col==='pharma');
+});
+render();tickClock();
+setInterval(()=>{tickClock();const a=document.activeElement;if(!(a&&(a.id==='q'||a.dataset&&a.dataset.price)))render();},30000);
+</script>
+</body>
+</html>
